@@ -9,6 +9,12 @@ handle_path /api/new-tracking/* {
 	}
 }
 
+handle /api/webhooks/* {
+	reverse_proxy https://newtracking-sales-sys.vercel.app {
+		header_up Host newtracking-sales-sys.vercel.app
+	}
+}
+
 handle {
 	root * /app/dist
 	try_files {path} /index.html

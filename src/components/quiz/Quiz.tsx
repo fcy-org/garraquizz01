@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag, Sparkles, TrendingUp } from "lucide-react";
 import ProgressBar from "./ProgressBar";
@@ -11,12 +11,7 @@ import logo from "../assets/logo.png";
 declare function fbq(...args: unknown[]): void;
 
 const TOTAL_STEPS = 9;
-const CRM_URL = "https://salesyscrm.vercel.app/api/public/leads";
-const LEAD_CAPTURE_KEY = "braveo-principal-pixel-001";
-const SHEETS_URL =
-  "https://script.google.com/macros/s/AKfycbyP-QbHP8R7abyDzqHiG3g-k8YmJhRrWk9rDeCpxEsPwROi82c5P1OfIzPO0paQa6Xo4Q/exec";
-const NEW_TRACKING_URL = "/api/new-tracking/leads";
-const NEW_TRACKING_KEY = "u7hjat5pjvfs8m7ls2ndwefn";
+const WEBHOOK_URL = "/api/webhooks/leads/cmpsco6tj00036wt3kna7cp5b";
 const WHATSAPP_NUMBERS: Record<string, string> = {
   MA: "558695319157",
   PI: "558694271798",
@@ -92,9 +87,10 @@ function getCookie(name: string): string {
   return match ? match.split("=").slice(1).join("=").trim() : "";
 }
 
-function getFbc(fbclid: string): string {
+function getFbc(): string {
   const cookie = getCookie("_fbc");
   if (cookie) return cookie;
+  const fbclid = getFbclid();
   if (fbclid) return `fb.1.${Date.now()}.${fbclid}`;
   return "";
 }
@@ -103,81 +99,51 @@ function getFbp(): string {
   return getCookie("_fbp");
 }
 
-// Capturado uma única vez no carregamento da página — imune a qualquer mudança
-// de URL que ocorra durante o quiz (hash updates, redirects internos, etc.)
-const PAGE_UTMS = getUTMs();
-const PAGE_FBCLID = getFbclid();
-
-function getTrackingParams(eventId: string) {
+function getTrackingParams() {
+  const utms = getUTMs();
   return {
-    fbc: getFbc(PAGE_FBCLID),
+    fbc: getFbc(),
     fbp: getFbp(),
-    event_id: eventId,
-    fbclid: PAGE_FBCLID,
-    ...PAGE_UTMS,
+    event_id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    ...utms,
   };
 }
 
-interface NewTrackingPayload {
-  name: string;
-  phone: string;
-  email: string;
-  cnpj: string;
-  state: string;
-  city: string;
-  eventId: string;
-  tipoLoja?: string;
-  investimentoMercadoria?: string;
-  estoqueParado?: string;
-  areaMelhorar?: string;
-  produtos?: string[];
-}
+async function sendWebhookLead(answers: Answers) {
+  const leadName = answers.nomeCompleto || answers.nomeUsuario || "Lead";
+  const normalizedPhone = answers.telefone.replace(/\D/g, "");
+  const normalizedCnpj = answers.cnpj.replace(/\D/g, "");
+  const fbclid = getFbclid();
+  const tracking = getTrackingParams();
 
-async function sendNewTracking(p: NewTrackingPayload) {
-  const trackingParams = getTrackingParams(p.eventId);
-  console.log("[NT] payload →", { ...p, ...trackingParams });
   try {
-    const response = await fetch(NEW_TRACKING_URL, {
+    const response = await fetch(WEBHOOK_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-lead-capture-key": NEW_TRACKING_KEY,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        // campos de identificação
-        name: p.name,
-        phone: p.phone,
-        email: p.email,
-        cnpj: p.cnpj,
-        document: p.cnpj,
-        documentType: "cnpj",
-        // localização — usados para rotear ao consultor correto (MA / PI)
-        state: p.state,
-        city: p.city,
-        estado: p.state,
-        cidade: p.city,
-        // chave de integração — necessária para o NT rotear para o CRM e planilha
-        leadCaptureKey: LEAD_CAPTURE_KEY,
-        // dados do quiz — usados pela planilha dos consultores
-        tipoLoja: p.tipoLoja,
-        investimentoMercadoria: p.investimentoMercadoria,
-        estoqueParado: p.estoqueParado,
-        areaMelhorar: p.areaMelhorar,
-        produtos: p.produtos,
-        // rastreamento Meta
-        ...trackingParams,
+        phone: normalizedPhone,
+        name: leadName,
+        email: answers.email,
+        document: normalizedCnpj,
+        city: answers.cidade,
+        state: answers.estado,
+        pipeline_stage: "Diagnóstico Quiz",
+        tipo_loja: answers.tipoLoja,
+        investimento_mensal: answers.investimentoMercadoria,
+        estoque_parado: answers.estoqueParado,
+        area_melhorar: answers.areaMelhorar,
+        categorias_trabalhadas: answers.produtos.join(", "),
+        fbclid,
+        ...tracking,
       }),
     });
 
     if (!response.ok) {
-      const responseData = await response.json().catch(() => null);
-      console.error("New tracking lead capture failed", {
-        status: response.status,
-        response: responseData,
-      });
+      const data = await response.json().catch(() => null);
+      console.error("Webhook lead failed", { status: response.status, response: data });
     }
   } catch (error) {
-    console.error("New tracking request error", error);
+    console.error("Webhook request error", error);
   }
 }
 
@@ -220,7 +186,6 @@ function trackQuizStep(step: number) {
     console.error("Meta Pixel step tracking error", error);
   }
 }
-
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
@@ -336,16 +301,12 @@ const Quiz = () => {
     telefone: "",
   });
   const [isSubmittingLead, setIsSubmittingLead] = useState(false);
-  const [isSendingSheet, setIsSendingSheet] = useState(false);
-  const [sheetSent, setSheetSent] = useState(false);
+  const [isLoadingLead, setIsLoadingLead] = useState(false);
+  const [webhookSent, setWebhookSent] = useState(false);
   const [diagnosisProgress, setDiagnosisProgress] = useState(0);
   const [redirectProgress, setRedirectProgress] = useState(0);
   const [redirectSeconds, setRedirectSeconds] = useState(3);
   const redirectStartedRef = useRef(false);
-  // event_id gerado uma única vez por sessão para deduplicação Meta Pixel ↔ API
-  const eventIdRef = useRef(`${Date.now()}-${Math.random().toString(36).slice(2, 9)}`);
-  // flag para garantir que o New Tracking seja enviado apenas uma vez
-  const newTrackingSentRef = useRef(false);
   const [diagnosisText, setDiagnosisText] = useState(
     "Preparando seu diagnóstico..."
   );
@@ -428,161 +389,28 @@ const Quiz = () => {
     setTimeout(next, 350);
   };
 
-  const getLeadName = useCallback(() => {
+  const getLeadName = () => {
     return answers.nomeCompleto || answers.nomeUsuario || displayName;
-  }, [answers.nomeCompleto, answers.nomeUsuario, displayName]);
+  };
 
-  const sendSheetData = useCallback(async () => {
-    const leadName = getLeadName();
-    const normalizedCnpj = answers.cnpj.replace(/\D/g, "");
-    const utms = PAGE_UTMS;
-    const fbclid = PAGE_FBCLID;
-
-    console.log("[Sheets] utm →", utms, "fbclid →", fbclid);
-
-    const sheetsPayload = JSON.stringify({
-      nomeCompleto: leadName,
-      nome: leadName,
-      nomeUsuario: answers.nomeUsuario,
-      nomeFarmacia: answers.nomeFarmacia,
-      email: answers.email,
-      telefone: answers.telefone,
-      documento: normalizedCnpj,
-      tipoDocumento: "cnpj",
-      estado: answers.estado,
-      cidade: answers.cidade,
-      tipoLoja: answers.tipoLoja,
-      investimentoMercadoria: answers.investimentoMercadoria,
-      estoqueParado: answers.estoqueParado,
-      areaMelhorar: answers.areaMelhorar,
-      faturamento: answers.faturamento,
-      desempenho: answers.desempenho,
-      produtos: answers.produtos,
-      mediaFaturamento: answers.mediaFaturamento,
-      fbclid,
-      utm_source: utms.utm_source,
-      utm_medium: utms.utm_medium,
-      utm_campaign: utms.utm_campaign,
-      utm_content: utms.utm_content,
-      utm_term: utms.utm_term,
-    });
-
-    try {
-      await fetch(SHEETS_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: sheetsPayload,
-      });
-    } catch (error) {
-      console.error("Sheets request error", error);
-    }
-  }, [answers, getLeadName]);
-
-  // Envia para o New Tracking apenas uma vez por sessão, independente de quantas
-  // vezes for chamada (etapa 8 ao confirmar form + etapa 9 no auto-redirect)
-  const sendNewTrackingOnce = useCallback(async () => {
-    if (newTrackingSentRef.current) return;
-    newTrackingSentRef.current = true;
-
-    await sendNewTracking({
-      name: getLeadName(),
-      phone: answers.telefone.replace(/\D/g, ""),
-      email: answers.email,
-      cnpj: answers.cnpj.replace(/\D/g, ""),
-      state: answers.estado,
-      city: answers.cidade,
-      eventId: eventIdRef.current,
-      tipoLoja: answers.tipoLoja,
-      investimentoMercadoria: answers.investimentoMercadoria,
-      estoqueParado: answers.estoqueParado,
-      areaMelhorar: answers.areaMelhorar,
-      produtos: answers.produtos,
-    });
-  }, [answers, getLeadName]);
-
-  const redirectToSpecialist = useCallback(async () => {
+  const redirectToSpecialist = async () => {
     if (isSubmittingLead) {
       return;
     }
 
     setIsSubmittingLead(true);
 
-    const utms = PAGE_UTMS;
-    const fbclid = PAGE_FBCLID;
-    const normalizedPhone = answers.telefone.replace(/\D/g, "");
-    const normalizedCnpj = answers.cnpj.replace(/\D/g, "");
-    const leadName = getLeadName();
-    const eventId = eventIdRef.current;
-    const fbc = getFbc(PAGE_FBCLID);
-    const fbp = getFbp();
-
-    // eventID correlaciona o evento browser com a chamada server-side para deduplicação
     try {
-      fbq("track", "Lead", {}, { eventID: eventId });
+      fbq("track", "Lead");
     } catch (_) {
       // pixel pode não estar carregado
     }
 
-    // New Tracking — protegido pelo newTrackingSentRef, não dispara duas vezes
-    const newTrackingPromise = sendNewTrackingOnce();
-
-    console.log("[CRM] utm →", utms, "fbclid →", fbclid, "fbc →", fbc);
-
-    // CRM — agora recebe todos os campos de rastreamento alinhados ao New Tracking
-    const crmPromise = fetch(CRM_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        leadCaptureKey: LEAD_CAPTURE_KEY,
-        name: leadName,
-        phone: normalizedPhone,
-        email: answers.email,
-        document: normalizedCnpj,
-        cnpj: normalizedCnpj,
-        documentType: "cnpj",
-        state: answers.estado,
-        city: answers.cidade,
-        estado: answers.estado,
-        cidade: answers.cidade,
-        fbc,
-        fbp,
-        event_id: eventId,
-        utm_source: utms.utm_source,
-        utm_medium: utms.utm_medium,
-        utm_campaign: utms.utm_campaign,
-        utm_content: utms.utm_content,
-        utm_term: utms.utm_term,
-        fbclid,
-      }),
-    })
-      .then(async (response) => {
-        const crmData = await response.json().catch(() => null);
-
-        if (!response.ok) {
-          console.error("CRM lead capture failed", {
-            status: response.status,
-            response: crmData,
-          });
-        } else if (crmData?.duplicate) {
-          console.warn("CRM lead already exists", crmData);
-        } else {
-          console.info("CRM lead created successfully", crmData);
-        }
-      })
-      .catch((error) => {
-        console.error("CRM lead capture request error", error);
-      });
-
-    if (!sheetSent) {
-      await sendSheetData();
-      setSheetSent(true);
+    if (!webhookSent) {
+      await sendWebhookLead(answers);
     }
 
-    await Promise.allSettled([crmPromise, newTrackingPromise]);
-
+    const leadName = getLeadName();
     const phone = WHATSAPP_NUMBERS[answers.estado] ?? WHATSAPP_NUMBERS["PI"];
     const msg = encodeURIComponent(
       `Olá! Fiz o diagnóstico no site e gostaria de falar com um especialista.\n\n` +
@@ -596,7 +424,7 @@ const Quiz = () => {
     );
 
     window.location.href = `https://wa.me/${phone}?text=${msg}`;
-  }, [answers, isSubmittingLead, sheetSent, sendNewTrackingOnce, sendSheetData, getLeadName]);
+  };
 
   useEffect(() => {
     if (step !== 9 || redirectStartedRef.current) {
@@ -628,7 +456,7 @@ const Quiz = () => {
       window.clearInterval(secondsInterval);
       window.clearTimeout(redirectTimeout);
     };
-  }, [step, redirectToSpecialist]);
+  }, [step]);
 
   const renderStep = () => {
     switch (step) {
@@ -960,22 +788,14 @@ const Quiz = () => {
 
             <QuizButton
               onClick={async () => {
-                if (isSendingSheet) {
+                if (isLoadingLead) {
                   return;
                 }
 
-                setIsSendingSheet(true);
-                const leadName = getLeadName();
-                const normalizedPhone = answers.telefone.replace(/\D/g, "");
-                const normalizedCnpj = answers.cnpj.replace(/\D/g, "");
-
-                await Promise.allSettled([
-                  sendSheetData(),
-                  sendNewTrackingOnce(),
-                ]);
-
-                setSheetSent(true);
-                setIsSendingSheet(false);
+                setIsLoadingLead(true);
+                await sendWebhookLead(answers);
+                setWebhookSent(true);
+                setIsLoadingLead(false);
                 next();
               }}
               disabled={
@@ -987,7 +807,7 @@ const Quiz = () => {
               }
               variant="cta"
             >
-              {isSendingSheet ? "Enviando dados..." : "Liberar meu diagnóstico"}
+              {isLoadingLead ? "Enviando dados..." : "Liberar meu diagnóstico"}
             </QuizButton>
           </div>
         );
