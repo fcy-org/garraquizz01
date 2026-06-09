@@ -880,10 +880,10 @@ const Quiz = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-background flex flex-col relative overflow-x-hidden">
       <WaveDecoration />
 
-      <div className="w-full bg-primary py-5 px-6 flex items-center justify-between relative shadow-md">
+      <div className="w-full bg-primary px-6 flex items-center justify-between relative shadow-md" style={{ height: "96px" }}>
         <div className="w-[60px] flex justify-start">
           {step > 1 && step < 7 && (
             <button
@@ -896,8 +896,8 @@ const Quiz = () => {
           )}
         </div>
 
-        <div className="absolute left-1/2 -translate-x-1/2">
-          <img src={logo} alt="GARRA Distribuidora" className="h-14 w-auto" />
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center h-full">
+          <img src={logo} alt="GARRA Distribuidora" className="h-full w-auto py-2" />
         </div>
 
         <div className="w-[60px]" />
