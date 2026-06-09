@@ -6,16 +6,14 @@ import OptionButton from "./OptionButton";
 import QuizButton from "./QuizButton";
 import QuizInput from "./QuizInput";
 import WaveDecoration from "./WaveDecoration";
-import logo from "../assets/logo.png";
+import logo from "../assets/logo-garra.webp";
+import { MUNICIPIOS_PIAUI } from "@/data/municipiosPiaui";
 
 declare function fbq(...args: unknown[]): void;
 
 const TOTAL_STEPS = 9;
-const WEBHOOK_URL = "/api/webhooks/leads/cmpsco6tj00036wt3kna7cp5b";
-const WHATSAPP_NUMBERS: Record<string, string> = {
-  MA: "558695319157",
-  PI: "558694271798",
-};
+const WEBHOOK_URL = "/api/webhooks/leads/cmpy5fztd000348rojo6xn9f5";
+const WHATSAPP_NUMBER = "558699870988";
 
 const slideVariants = {
   enter: { x: 60, opacity: 0 },
@@ -126,13 +124,16 @@ async function sendWebhookLead(answers: Answers) {
         email: answers.email,
         document: normalizedCnpj,
         city: answers.cidade,
-        state: answers.estado,
-        pipeline_stage: "Diagnóstico Quiz",
-        tipo_loja: answers.tipoLoja,
-        investimento_mensal: answers.investimentoMercadoria,
-        estoque_parado: answers.estoqueParado,
-        area_melhorar: answers.areaMelhorar,
-        categorias_trabalhadas: answers.produtos.join(", "),
+        state: "PI",
+        pipeline_stage: "Diagnóstico Quiz Garra",
+        notes: [
+          `Tipo de estabelecimento: ${answers.tipoLoja || "Não informado"}`,
+          `Investimento mensal em mercadoria: ${answers.investimentoMercadoria || "Não informado"}`,
+          `Produto parado no estoque: ${answers.estoqueParado || "Não informado"}`,
+          `Área que quer melhorar: ${answers.areaMelhorar || "Não informado"}`,
+          `Categorias trabalhadas: ${answers.produtos.length > 0 ? answers.produtos.join(", ") : "Não informado"}`,
+          fbclid ? `Fbclid: ${fbclid}` : "",
+        ].filter(Boolean).join("\n"),
         fbclid,
         ...tracking,
       }),
@@ -147,10 +148,6 @@ async function sendWebhookLead(answers: Answers) {
   }
 }
 
-function normalizeState(value: string) {
-  const normalized = value.trim().toUpperCase();
-  return normalized === "PI" || normalized === "MA" ? normalized : "";
-}
 
 function updateQuizHash(step: number) {
   const nextHash = `#etapa-${step}`;
@@ -172,14 +169,14 @@ function trackQuizStep(step: number) {
     }
 
     fbq("trackCustom", "QuizStepView", {
-      quiz_name: "rio_piranhas_diagnostico",
+      quiz_name: "garra_distribuidora_diagnostico",
       step_number: step,
       step_name: `etapa-${step}`,
       step_url: `${window.location.pathname}${window.location.search}#etapa-${step}`,
     });
 
     fbq("trackCustom", `Quiz_Etapa_${step}`, {
-      quiz_name: "rio_piranhas_diagnostico",
+      quiz_name: "garra_distribuidora_diagnostico",
       step_number: step,
     });
   } catch (error) {
@@ -205,66 +202,66 @@ function getDiagnosisInsights(answers: Answers, name: string): DiagnosisInsight[
     insights.push({
       icon: "⚠️",
       title: "Estoque parado travando lucro",
-      text: `${name}, sua ${loja.toLowerCase()} pode estar com capital preso em produtos de baixo giro. Reorganizar o mix de higiene, beleza e perfumaria ajuda a liberar caixa e abrir espaço para itens que vendem todos os dias.`,
+      text: `${name}, seu ${loja.toLowerCase()} pode estar com capital preso em produtos de baixo giro. Reorganizar o mix de doces, snacks e produtos de impulso ajuda a liberar caixa e abrir espaço para itens que vendem todos os dias.`,
       highlight: true,
     });
   } else if (answers.estoqueParado === "Um pouco") {
     insights.push({
       icon: "📦",
       title: "Oportunidade escondida no estoque",
-      text: `${name}, existe sinal de estoque parado, mas ainda há espaço para corrigir rápido. O diagnóstico aponta onde ajustar compras para melhorar giro, ticket e margem.`,
+      text: `${name}, existe sinal de estoque parado, mas ainda há espaço para corrigir rápido. O diagnóstico aponta onde ajustar as compras para melhorar giro, ticket e margem no seu estabelecimento.`,
       highlight: true,
     });
   } else {
     insights.push({
       icon: "📈",
       title: "Base saudável para crescer",
-      text: `${name}, se quase não há produto parado, o próximo passo é usar esse controle para fortalecer categorias que aumentam ticket médio sem pesar o estoque.`,
+      text: `${name}, se quase não há produto parado, o próximo passo é fortalecer as categorias de impulso que aumentam o ticket médio sem pesar o estoque.`,
       highlight: true,
     });
   }
 
   // Insight 2: categoria de maior oportunidade
   const catMsg: Record<string, { title: string; text: string }> = {
-    "Linha Infantil": {
-      title: "Linha Infantil: fidelização garantida",
-      text: "Produtos infantis têm alta taxa de recompra — clientes voltam todo mês. Uma boa exposição e mix atualizado transforma essa categoria em renda recorrente.",
+    "Balas e chicletes": {
+      title: "Balas e chicletes: o maior giro do checkout",
+      text: "Balas e chicletes têm alta taxa de recompra e saída diária. Um mix bem abastecido no checkout evita ruptura e garante venda sem esforço de exposição.",
     },
-    "Higiene Bucal": {
-      title: "Higiene Bucal: maior giro do Nordeste",
-      text: "Higiene bucal tem alto índice de giro em lojas do Piauí e Maranhão. Estar bem abastecido com as marcas certas evita perda de vendas por ruptura.",
+    "Pirulitos e mastigáveis": {
+      title: "Pirulitos e mastigáveis: impulso garantido",
+      text: "Produtos mastigáveis têm forte apelo infantil e de impulso. Posicioná-los bem perto do caixa pode aumentar o ticket médio em cada compra.",
     },
-    "Capilar": {
-      title: "Capilar: margem acima da média",
-      text: "A linha capilar tem margem superior à maioria das categorias. Uma boa variedade de marcas e boa exposição pode aumentar o ticket médio com produtos que os clientes já procuram.",
+    "Chocolates e snacks": {
+      title: "Chocolates e snacks: margem acima da média",
+      text: "Chocolates e snacks têm margem superior à maioria das categorias de impulso. Uma boa variedade de marcas Dori pode elevar o faturamento sem aumentar o volume de pedidos.",
     },
-    "Cuidado com a Pele": {
-      title: "Cuidados com a Pele: crescimento acelerado",
-      text: "Cuidados com a pele é uma categoria em crescimento no setor. Lojas que investem nessa linha podem aumentar o faturamento com produtos de recompra e maior valor percebido.",
+    "Produtos infantis Dori": {
+      title: "Produtos infantis: fidelização pelo público certo",
+      text: "A linha infantil Dori tem alta fidelização — crianças pedem pelo produto e adultos repetem a compra. Manter o mix atualizado transforma essa categoria em receita recorrente.",
     },
   };
 
   const destaque = answers.produtos.find((p) => catMsg[p]);
   if (destaque) {
-    insights.push({ icon: "🧴", ...catMsg[destaque] });
+    insights.push({ icon: "🍬", ...catMsg[destaque] });
   }
 
   const areaMsg: Record<string, { title: string; text: string }> = {
     "Giro de produtos": {
       title: "Produtos que deveriam girar mais",
-      text: "A prioridade é identificar o que vende rápido na sua região e reduzir compras que deixam dinheiro parado na prateleira.",
+      text: "A prioridade é identificar quais doces e snacks vendem mais rápido na sua região e reduzir compras que deixam dinheiro parado na prateleira.",
     },
     "Ticket médio": {
-      title: "Ticket médio com categorias certas",
-      text: "Combinações de higiene, beleza e perfumaria podem elevar o valor de cada compra sem depender de descontos agressivos.",
+      title: "Ticket médio com produtos de impulso",
+      text: "Doces, snacks e itens de impulso Dori podem elevar o valor de cada compra sem depender de promoções agressivas.",
     },
     "Mix de categorias": {
       title: "Mix mais inteligente por categoria",
-      text: "Um mix equilibrado evita excesso de produtos parecidos e dá mais força para categorias com recompra e margem melhor.",
+      text: "Um mix equilibrado de balas, chocolates e snacks evita excesso de produtos parecidos e fortalece as categorias com maior recompra e margem.",
     },
     "Margem de lucro": {
       title: "Margem com compra mais estratégica",
-      text: "Ajustar o mix ajuda sua loja a vender produtos com melhor retorno, não apenas itens que ocupam espaço no estoque.",
+      text: "Ajustar o mix de impulso ajuda seu estabelecimento a vender produtos com melhor retorno, não apenas itens que ocupam espaço no estoque.",
     },
   };
 
@@ -322,8 +319,8 @@ const Quiz = () => {
 
     const textSteps = [
       "Analisando seu perfil de compra...",
-      "Comparando com padrões de lojas da sua região...",
-      "Identificando oportunidades escondidas no estoque...",
+      "Comparando com padrões de mercados da sua região...",
+      "Identificando oportunidades escondidas no seu mix...",
       "Finalizando seu diagnóstico de giro inteligente...",
     ];
 
@@ -405,13 +402,14 @@ const Quiz = () => {
     }
 
     const leadName = getLeadName();
-    const phone = WHATSAPP_NUMBERS[answers.estado] ?? WHATSAPP_NUMBERS["PI"];
+    const phone = WHATSAPP_NUMBER;
     const msg = encodeURIComponent(
       `Olá! Fiz o diagnóstico no site e gostaria de falar com um especialista.\n\n` +
         `Nome: ${leadName}\n` +
         `Telefone: ${answers.telefone}\n` +
         `CNPJ: ${answers.cnpj}\n` +
-        `Tipo de loja: ${answers.tipoLoja}\n` +
+        `Tipo de estabelecimento: ${answers.tipoLoja}\n` +
+        `Cidade: ${answers.cidade} / PI\n` +
         `Investimento mensal: ${answers.investimentoMercadoria}\n` +
         `Estoque parado: ${answers.estoqueParado}\n` +
         `Área que quer melhorar: ${answers.areaMelhorar}`
@@ -467,13 +465,13 @@ const Quiz = () => {
             </h1>
 
             <p className="text-muted-foreground text-base md:text-lg max-w-md">
-              Descubra em 2 minutos quais produtos de higiene e beleza podem
-              destravar seu faturamento.
+              Descubra em 2 minutos quais doces, snacks e produtos de impulso
+              podem destravar o giro do seu estabelecimento.
             </p>
 
             <p className="text-primary font-semibold text-sm md:text-base max-w-md">
-              +120 lojas no MA e PI já aplicaram esse diagnóstico. Frete grátis
-              para Maranhão e Piauí.
+              +120 estabelecimentos no Piauí já aplicaram esse diagnóstico.
+              Frete grátis para o Piauí.
             </p>
 
             <div className="w-full mt-4">
@@ -488,12 +486,13 @@ const Quiz = () => {
         return (
           <QuestionScreen
             emoji="🏪"
-            question="Qual tipo de loja você tem?"
+            question="Qual tipo de estabelecimento você tem?"
           >
             {[
-              "Farmácia",
-              "Loja de cosméticos",
-              "Perfumaria",
+              "Mercado / Mercadinho",
+              "Supermercado",
+              "Conveniência",
+              "Padaria",
               "Outro",
             ].map((opt) => (
               <OptionButton
@@ -611,15 +610,15 @@ const Quiz = () => {
       case 6:
         return (
           <QuestionScreen
-            emoji="🧴"
-            question="Quais categorias de higiene, beleza e perfumaria você mais trabalha?"
+            emoji="🍬"
+            question="Quais categorias de doces, snacks e bomboniere você mais trabalha?"
             subtitle="(Pode selecionar mais de uma opção)"
           >
             {[
-              "Linha Infantil",
-              "Higiene Bucal",
-              "Capilar",
-              "Cuidado com a Pele"
+              "Balas e chicletes",
+              "Pirulitos e mastigáveis",
+              "Chocolates e snacks",
+              "Produtos infantis Dori",
             ].map((opt) => (
               <OptionButton
                 key={opt}
@@ -747,25 +746,16 @@ const Quiz = () => {
                   Informe um e-mail válido.
                 </p>
               )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <select
-                  value={answers.estado}
-                  onChange={(e) => setAnswer("estado", normalizeState(e.target.value))}
-                  className="w-full p-4 rounded-lg border-2 border-border bg-card text-foreground font-medium focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                >
-                  <option value="" disabled>
-                    Estado
-                  </option>
-                  <option value="PI">Piauí (PI)</option>
-                  <option value="MA">Maranhão (MA)</option>
-                </select>
-
-                <QuizInput
-                  value={answers.cidade}
-                  onChange={(v) => setAnswer("cidade", v)}
-                  placeholder="Cidade"
-                />
-              </div>
+              <select
+                value={answers.cidade}
+                onChange={(e) => setAnswer("cidade", e.target.value)}
+                className="w-full p-4 rounded-lg border-2 border-border bg-card text-foreground font-medium focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+              >
+                <option value="" disabled>Cidade (Piauí)</option>
+                {MUNICIPIOS_PIAUI.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
               <QuizInput
                 value={answers.cnpj}
                 onChange={(v) => setAnswer("cnpj", v)}
@@ -775,7 +765,7 @@ const Quiz = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-semibold text-primary text-center">
-              <span className="rounded-lg bg-primary/10 px-3 py-2">Frete grátis MA/PI</span>
+              <span className="rounded-lg bg-primary/10 px-3 py-2">Frete grátis no PI</span>
               <span className="rounded-lg bg-primary/10 px-3 py-2">Atendimento especialista</span>
               <span className="rounded-lg bg-primary/10 px-3 py-2">Sugestão personalizada</span>
             </div>
@@ -799,7 +789,6 @@ const Quiz = () => {
                 answers.telefone.length < 14 ||
                 !isValidEmail(answers.email) ||
                 !validarCNPJ(answers.cnpj) ||
-                !answers.estado ||
                 !answers.cidade
               }
               variant="cta"
@@ -907,10 +896,10 @@ const Quiz = () => {
           )}
         </div>
 
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-8">
-          <img src={logo} alt="RIO PIRANHAS" className="h-7 w-auto" />
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
+          <img src={logo} alt="GARRA Distribuidora" className="h-10 w-auto" />
           <span className="text-primary-foreground font-bold text-lg tracking-wide whitespace-nowrap">
-            RIO PIRANHAS
+            GARRA Distribuidora
           </span>
         </div>
 
