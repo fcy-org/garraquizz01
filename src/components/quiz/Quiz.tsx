@@ -6,7 +6,7 @@ import OptionButton from "./OptionButton";
 import QuizButton from "./QuizButton";
 import QuizInput from "./QuizInput";
 import WaveDecoration from "./WaveDecoration";
-import logo from "../assets/logo-garra.webp";
+import logo from "../assets/logo-garra.png";
 import { MUNICIPIOS_PIAUI } from "@/data/municipiosPiaui";
 
 declare function fbq(...args: unknown[]): void;
@@ -896,11 +896,8 @@ const Quiz = () => {
           )}
         </div>
 
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
-          <img src={logo} alt="GARRA Distribuidora" className="h-10 w-auto" />
-          <span className="text-primary-foreground font-bold text-lg tracking-wide whitespace-nowrap">
-            GARRA Distribuidora
-          </span>
+        <div className="absolute left-1/2 -translate-x-1/2">
+          <img src={logo} alt="GARRA Distribuidora" className="h-14 w-auto" />
         </div>
 
         <div className="w-[60px]" />
