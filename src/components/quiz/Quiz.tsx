@@ -13,7 +13,7 @@ declare function fbq(...args: unknown[]): void;
 
 const TOTAL_STEPS = 9;
 const WEBHOOK_URL = "/api/webhooks/leads/cmpy5fztd000348rojo6xn9f5";
-const WHATSAPP_NUMBER = "558699870988";
+const WHATSAPP_NUMBER = "5586998260448";
 
 const slideVariants = {
   enter: { x: 60, opacity: 0 },
@@ -81,7 +81,9 @@ function getFbclid() {
 }
 
 function getCookie(name: string): string {
-  const match = document.cookie.split(";").find((c) => c.trim().startsWith(name + "="));
+  const match = document.cookie
+    .split(";")
+    .find((c) => c.trim().startsWith(name + "="));
   return match ? match.split("=").slice(1).join("=").trim() : "";
 }
 
@@ -133,7 +135,9 @@ async function sendWebhookLead(answers: Answers) {
           `Área que quer melhorar: ${answers.areaMelhorar || "Não informado"}`,
           `Categorias trabalhadas: ${answers.produtos.length > 0 ? answers.produtos.join(", ") : "Não informado"}`,
           fbclid ? `Fbclid: ${fbclid}` : "",
-        ].filter(Boolean).join("\n"),
+        ]
+          .filter(Boolean)
+          .join("\n"),
         fbclid,
         ...tracking,
       }),
@@ -141,13 +145,15 @@ async function sendWebhookLead(answers: Answers) {
 
     if (!response.ok) {
       const data = await response.json().catch(() => null);
-      console.error("Webhook lead failed", { status: response.status, response: data });
+      console.error("Webhook lead failed", {
+        status: response.status,
+        response: data,
+      });
     }
   } catch (error) {
     console.error("Webhook request error", error);
   }
 }
-
 
 function updateQuizHash(step: number) {
   const nextHash = `#etapa-${step}`;
@@ -194,7 +200,10 @@ type DiagnosisInsight = {
   highlight?: boolean;
 };
 
-function getDiagnosisInsights(answers: Answers, name: string): DiagnosisInsight[] {
+function getDiagnosisInsights(
+  answers: Answers,
+  name: string,
+): DiagnosisInsight[] {
   const insights: DiagnosisInsight[] = [];
   const loja = answers.tipoLoja || "loja";
 
@@ -223,21 +232,17 @@ function getDiagnosisInsights(answers: Answers, name: string): DiagnosisInsight[
 
   // Insight 2: categoria de maior oportunidade
   const catMsg: Record<string, { title: string; text: string }> = {
-    "Balas e chicletes": {
-      title: "Balas e chicletes: o maior giro do checkout",
-      text: "Balas e chicletes têm alta taxa de recompra e saída diária. Um mix bem abastecido no checkout evita ruptura e garante venda sem esforço de exposição.",
+    "Produtos Alimentícios": {
+      title: "Produtos Alimentícios: o maior giro do checkout",
+      text: "Produtos alimentícios têm alta taxa de recompra e saída diária. Um mix bem abastecido no checkout evita ruptura e garante venda sem esforço de exposição.",
     },
-    "Pirulitos e mastigáveis": {
-      title: "Pirulitos e mastigáveis: impulso garantido",
-      text: "Produtos mastigáveis têm forte apelo infantil e de impulso. Posicioná-los bem perto do caixa pode aumentar o ticket médio em cada compra.",
+    "Produtos de Limpeza": {
+      title: "Produtos de Limpeza: impulso garantido",
+      text: "Produtos de limpeza têm forte apelo infantil e de impulso. Posicioná-los bem perto do caixa pode aumentar o ticket médio em cada compra.",
     },
-    "Chocolates e snacks": {
-      title: "Chocolates e snacks: margem acima da média",
-      text: "Chocolates e snacks têm margem superior à maioria das categorias de impulso. Uma boa variedade de marcas Dori pode elevar o faturamento sem aumentar o volume de pedidos.",
-    },
-    "Produtos infantis Dori": {
-      title: "Produtos infantis: fidelização pelo público certo",
-      text: "A linha infantil Dori tem alta fidelização — crianças pedem pelo produto e adultos repetem a compra. Manter o mix atualizado transforma essa categoria em receita recorrente.",
+    "Petiscos, doces e snacks": {
+      title: "Petiscos, doces e snacks: margem acima da média",
+      text: "Petiscos, doces e snacks têm margem superior à maioria das categorias de impulso. Uma boa variedade de marcas Dori pode elevar o faturamento sem aumentar o volume de pedidos.",
     },
   };
 
@@ -305,7 +310,7 @@ const Quiz = () => {
   const [redirectSeconds, setRedirectSeconds] = useState(3);
   const redirectStartedRef = useRef(false);
   const [diagnosisText, setDiagnosisText] = useState(
-    "Preparando seu diagnóstico..."
+    "Preparando seu diagnóstico...",
   );
 
   useEffect(() => {
@@ -369,7 +374,7 @@ const Quiz = () => {
       }
 
       const filtered = current.filter(
-        (p) => p !== "Não trabalho muito esses produtos"
+        (p) => p !== "Não trabalho muito esses produtos",
       );
 
       return {
@@ -412,7 +417,7 @@ const Quiz = () => {
         `Cidade: ${answers.cidade} / PI\n` +
         `Investimento mensal: ${answers.investimentoMercadoria}\n` +
         `Estoque parado: ${answers.estoqueParado}\n` +
-        `Área que quer melhorar: ${answers.areaMelhorar}`
+        `Área que quer melhorar: ${answers.areaMelhorar}`,
     );
 
     window.location.href = `https://wa.me/${phone}?text=${msg}`;
@@ -570,11 +575,7 @@ const Quiz = () => {
             emoji="📦"
             question="Hoje, você sente que tem produto parado no estoque?"
           >
-            {[
-              "Muito",
-              "Um pouco",
-              "Quase nada",
-            ].map((opt) => (
+            {["Muito", "Um pouco", "Quase nada"].map((opt) => (
               <OptionButton
                 key={opt}
                 label={opt}
@@ -615,10 +616,9 @@ const Quiz = () => {
             subtitle="(Pode selecionar mais de uma opção)"
           >
             {[
-              "Balas e chicletes",
-              "Pirulitos e mastigáveis",
-              "Chocolates e snacks",
-              "Produtos infantis Dori",
+              "Produtos Alimentícios",
+              "Produtos de Limpeza",
+              "Petiscos, doces e snacks",
             ].map((opt) => (
               <OptionButton
                 key={opt}
@@ -630,7 +630,10 @@ const Quiz = () => {
             ))}
 
             <div className="mt-2">
-              <QuizButton onClick={next} disabled={answers.produtos.length === 0}>
+              <QuizButton
+                onClick={next}
+                disabled={answers.produtos.length === 0}
+              >
                 Continuar
               </QuizButton>
             </div>
@@ -677,7 +680,11 @@ const Quiz = () => {
                     <motion.div
                       className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
                       animate={{ x: ["-100%", "200%"] }}
-                      transition={{ duration: 1.4, repeat: Infinity, ease: "linear" }}
+                      transition={{
+                        duration: 1.4,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
                     />
                   )}
                 </motion.div>
@@ -751,9 +758,13 @@ const Quiz = () => {
                 onChange={(e) => setAnswer("cidade", e.target.value)}
                 className="w-full p-4 rounded-lg border-2 border-border bg-card text-foreground font-medium focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
               >
-                <option value="" disabled>Cidade (Piauí)</option>
+                <option value="" disabled>
+                  Cidade (Piauí)
+                </option>
                 {MUNICIPIOS_PIAUI.map((m) => (
-                  <option key={m} value={m}>{m}</option>
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
                 ))}
               </select>
               <QuizInput
@@ -765,9 +776,15 @@ const Quiz = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-semibold text-primary text-center">
-              <span className="rounded-lg bg-primary/10 px-3 py-2">Frete grátis no PI</span>
-              <span className="rounded-lg bg-primary/10 px-3 py-2">Atendimento especialista</span>
-              <span className="rounded-lg bg-primary/10 px-3 py-2">Sugestão personalizada</span>
+              <span className="rounded-lg bg-primary/10 px-3 py-2">
+                Frete grátis no PI
+              </span>
+              <span className="rounded-lg bg-primary/10 px-3 py-2">
+                Atendimento especialista
+              </span>
+              <span className="rounded-lg bg-primary/10 px-3 py-2">
+                Sugestão personalizada
+              </span>
             </div>
 
             <QuizButton
@@ -816,7 +833,8 @@ const Quiz = () => {
               <h2 className="text-xl md:text-2xl font-extrabold text-foreground leading-tight">
                 {firstName}, identificamos{" "}
                 <span className="text-primary">
-                  {insights.length} oportunidade{insights.length !== 1 ? "s" : ""}
+                  {insights.length} oportunidade
+                  {insights.length !== 1 ? "s" : ""}
                 </span>{" "}
                 na sua loja
               </h2>
@@ -828,7 +846,9 @@ const Quiz = () => {
                 <div
                   key={i}
                   className={`p-4 rounded-xl border-l-4 bg-card ${
-                    insight.highlight ? "border-l-primary" : "border-l-secondary"
+                    insight.highlight
+                      ? "border-l-primary"
+                      : "border-l-secondary"
                   }`}
                 >
                   <p className="font-bold text-sm text-foreground flex items-center gap-2">
@@ -869,8 +889,8 @@ const Quiz = () => {
                   />
                 </div>
               </div>
+            </div>
           </div>
-        </div>
         );
       }
 
@@ -883,7 +903,10 @@ const Quiz = () => {
     <div className="min-h-screen bg-background flex flex-col relative overflow-x-hidden">
       <WaveDecoration />
 
-      <div className="w-full bg-primary px-6 flex items-center justify-between relative shadow-md" style={{ height: "96px" }}>
+      <div
+        className="w-full bg-primary px-6 flex items-center justify-between relative shadow-md"
+        style={{ height: "96px" }}
+      >
         <div className="w-[60px] flex justify-start">
           {step > 1 && step < 7 && (
             <button
@@ -897,7 +920,11 @@ const Quiz = () => {
         </div>
 
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center h-full">
-          <img src={logo} alt="GARRA Distribuidora" className="h-full w-auto py-2" />
+          <img
+            src={logo}
+            alt="GARRA Distribuidora"
+            className="h-full w-auto py-2"
+          />
         </div>
 
         <div className="w-[60px]" />
